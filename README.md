@@ -4,14 +4,26 @@ This repository accompanies the "Generating meshes for MPAS-Atmosphere" mini-tut
 
 ### Prerequisites
 
-Before generating meshes with the workflow provided by this repository, you'll first need to install [JIGSAW]([url](https://github.com/dengwirda/jigsaw)). The JIGSAW `README.md` file provides installation guidance, though the following should generally be sufficient:
+This repository includes a `build.sh` script that clones, builds, and installs everything you need (both JIGSAW and the `mkgrid` program). The module commands in the script are tailored for NCAR's Derecho system, so adjust them to match your environment if you are building elsewhere.
+
+Running
 ```
-git clone https://github.com/dengwirda/jigsaw.git
-cd jigsaw && mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<WHERE_TO_INSTALL_JIGSAW>
-make -j 4 install
+./build.sh
 ```
-(Be sure to set the installation directory by replacing `WHERE_TO_INSTALL_JIGSAW` in the `cmake` command above.)
+will:
+
+1. Clone the sources into a `src/` directory:
+   - `src/jigsaw` &larr; [JIGSAW](https://github.com/dengwirda/jigsaw)
+   - `src/mkgrid` &larr; [mpas_jigsaw_tutorial](https://github.com/mgduda/mpas_jigsaw_tutorial) (provides `mkgrid.c`)
+2. Configure and build JIGSAW with CMake, installing it into a top-level `build/` directory (executables in `build/bin`, libraries in `build/lib`).
+3. Compile the `mkgrid` program — which derives MPAS's required mesh geometry and connectivity information from the generating points and their triangulation — into `build/bin/mkgrid`.
+
+`mkgrid` requires an MPI implementation (OpenMPI and MPICH are common options) plus the [PnetCDF library](https://parallel-netcdf.github.io/). On Derecho the `cc` compiler wrapper is used so that the MPI (cray-mpich) include/link flags PnetCDF depends on are added automatically; elsewhere you may need to compile with `mpicc` and point at your PnetCDF installation.
+
+After the script finishes, both `jigsaw` and `mkgrid` will be available in `build/bin`. Add this directory to your `PATH` so the workflow steps below can find them:
+```
+export PATH="$PWD/build/bin:$PATH"
+```
 
 Additionally, you'll also need a Python environment with at least the `numpy` and `netCDF4` packages. If you don't already have a suitable environemnt, setting up a Python virtual environment may be an easiest:
 ```
@@ -21,13 +33,7 @@ pip install --upgrade pip
 pip install numpy netCDF4
 ```
 
-Finally, in order to compile the `mkgrid` program, which derives MPAS's required mesh geometry and connectivity information from generating points and their triangulation, you will need an MPI implementation (OpenMPI and MPICH are common options) plus the [PnetCDF library]([url](https://parallel-netcdf.github.io/)). After ensuring that the `mpicc` command is in your `PATH`, and the `PNETCDF` environment variable points to the installation path of the PnetCDF library, you can simply run
-```
-make
-```
-to build the `mkgrid` program from `mkgrid.c`.
-
-### Generating your first variable-resolution mesh with JIGSAW
+### Generating your first variable-resolution mesh with JIGSAW + MKGRID
 
 Generating a variable-resolution mesh with a 12-km circular refinement region centered at 38 N, 95 W, relaxing to 60-km grid spacing over a distance of 1600 km is accomplished with the following steps.
 
